@@ -1,5 +1,4 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { headers } from "next/headers";
 import { URLSearchParams } from "url";
 
 type Props = {
@@ -15,7 +14,6 @@ type Props = {
 export default async function Page({ searchParams }: Props) {
   // Get the userId from auth() -- if null, the user is not signed in
   const { userId } = await auth();
-  const header = await headers();
 
   // Protect the route by checking if the user is signed in
   if (!userId) {
