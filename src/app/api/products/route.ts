@@ -13,13 +13,16 @@ type Params = {
     page: number;
     pageSize: number;
   };
-  filters?: {
+  query?: {
     keys: string[];
-    query: string;
+    value: string;
   };
+  filters?: Filter[];
 };
 
-const buildStrapiQuery = ({ filters, pagination }: Params) => {
+type Filter = { key: string; value: string };
+
+const buildStrapiQuery = ({ query, pagination, filters = [] }: Params) => {
   const params = new URLSearchParams();
 
   if (pagination) {
@@ -29,12 +32,14 @@ const buildStrapiQuery = ({ filters, pagination }: Params) => {
     params.set("pagination[pageSize]", String(pageSize));
   }
 
-  if (filters) {
-    const { keys, query } = filters;
+  if (query) {
+    const { keys, value } = query;
     keys.forEach((key, index) =>
-      params.append(`filters[$or][${index}][${key}][$containsi]`, query)
+      params.append(`filters[$or][${index}][${key}][$containsi]`, value)
     );
   }
+
+  filters.forEach(({ key, value }) => params.append(key, value));
 
   return params;
 };
@@ -44,13 +49,32 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get("query") ?? "";
   const page = searchParams.get("page") ?? "1";
   const pageSize = searchParams.get("pageSize");
+  const startDate = searchParams.get("startDate") ?? "";
+  const endDate = searchParams.get("endDate") ?? "";
+
+  const filters: Filter[] = [];
+
+  if (startDate) {
+    filters.push({
+      key: "filters[createdAt][$gte]",
+      value: startDate,
+    });
+  }
+
+  if (endDate) {
+    filters.push({
+      key: "filters[createdAt][$lte]",
+      value: endDate,
+    });
+  }
 
   const params = buildStrapiQuery({
-    filters: { keys: ["name"], query },
+    query: { keys: ["name"], value: query },
     pagination: {
       page: parseInt(page, 10),
       pageSize: pageSize ? parseInt(pageSize) : PAGE_SIZE,
     },
+    filters,
   });
 
   const response = await fetch(
